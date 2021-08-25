@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/cryptosuite"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk/api"
+	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk/factory/defcore"
 	"github.com/pkg/errors"
 )
 
@@ -56,6 +57,12 @@ type gatewayOptions struct {
 	FromBlock    uint64
 	FromBlockSet bool
 }
+
+// CustomCryptoSuiteProviderFactory is will provide custom cryptosuite (bccsp.BCCSP)
+type CustomCryptoSuiteProviderFactory struct {
+	defcore.ProviderFactory
+}
+
 
 // Option functional arguments can be supplied when connecting to the gateway.
 type Option = func(*Gateway) error
@@ -202,11 +209,34 @@ func WithIdentity(wallet wallet, label string) IdentityOption {
 			return err
 		}
 
-		privateKey, _ := fabricCaUtil.ImportBCCSPKeyFromPEMBytes([]byte(creds.(*X509Identity).Key()), cryptosuite.GetDefault(), true)
+		var privateKey core.Key
+		var enrollmentCertificate  []byte
+
+		switch creds.idType() {
+		case x509Type:
+			enrollmentCertificate = []byte(creds.(*X509Identity).Certificate())
+			privateKey, _ = fabricCaUtil.ImportBCCSPKeyFromPEMBytes([]byte(creds.(*X509Identity).Key()), cryptosuite.GetDefault(), true)
+
+		/*
+		case Hsmx509type:
+			enrollmentCertificate = []byte(creds.(*Hsmx509Identity).Certificate())
+			conf := wallet.(*Wallet).store.(*hsmWalletStore).hsmConf
+			print(string(conf))
+			sdk, _ := fabsdk.New(config.FromFile(conf))
+			configBackend, _ := sdk.Config()
+			cryptoSuiteConfig := cryptosuite.ConfigFromBackend(configBackend)
+			csp, _ := pkcs11.GetSuiteByConfig(cryptoSuiteConfig)
+			certPubK, _ := csp.KeyImport(creds.(*Hsmx509Identity).Credentials.Certificate, &bccsp.ECDSAGoPublicKeyImportOpts{Temporary: true})
+			// Get the key given the SKI value
+			ski := certPubK.SKI()
+			privateKey, _ = csp.GetKey(ski)
+		*/
+		}
+
 		wid := &walletIdentity{
 			id:                    label,
 			mspID:                 creds.mspID(),
-			enrollmentCertificate: []byte(creds.(*X509Identity).Certificate()),
+			enrollmentCertificate: enrollmentCertificate,
 			privateKey:            privateKey,
 		}
 

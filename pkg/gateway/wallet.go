@@ -74,6 +74,8 @@ func (w *Wallet) Get(label string) (Identity, error) {
 	switch idType {
 	case x509Type:
 		id = &X509Identity{}
+	case Hsmx509type:
+		id = &Hsmx509Identity{}
 	default:
 		return nil, errors.New("Invalid identity format: unsupported identity type: " + idType)
 	}
