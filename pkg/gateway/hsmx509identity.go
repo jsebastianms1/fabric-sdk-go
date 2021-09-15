@@ -1,6 +1,5 @@
 /*
 Copyright 2020 IBM All Rights Reserved.
-
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -58,4 +57,3 @@ func (hsmi *Hsmx509Identity) fromJSON(data []byte) (Identity, error) {
 	}
 
 	return hsmi, nil
-}
